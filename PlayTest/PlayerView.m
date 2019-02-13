@@ -24,7 +24,7 @@
 - (void)setFrame:(NSRect)frame{
     [super setFrame:frame];
     _needsReshape = YES;
-    _bounds = [self bounds];
+    _bounds = [self convertRectToBacking:[self bounds]];;
 }
 
 - (id)initWithCoder:(NSCoder *)decoder{
@@ -48,11 +48,11 @@
         [self setPixelFormat:pf];
         
         CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-        _ciContext = [CIContext contextWithCGLContext:(CGLContextObj)[[self openGLContext] CGLContextObj]
-                                          pixelFormat:(CGLPixelFormatObj)[[self pixelFormat] CGLPixelFormatObj]
-                                           colorSpace:colorSpace
-                                              options:nil];
+		CGLContextObj cglContext = (CGLContextObj)[[self openGLContext] CGLContextObj];
+		CGLPixelFormatObj pixelFormat = (CGLPixelFormatObj)[[self pixelFormat] CGLPixelFormatObj];
+        _ciContext = [CIContext contextWithCGLContext:cglContext  pixelFormat:pixelFormat colorSpace:colorSpace options:nil];
         CGColorSpaceRelease(colorSpace);
+		[self setWantsBestResolutionOpenGLSurface:YES];
     }
     
     return self;
@@ -76,7 +76,7 @@
     [[self openGLContext] makeCurrentContext];
     if (_displayBuffer){
         CVPixelBufferLockBaseAddress(_displayBuffer, 0);
-        
+		
         if (_needsReshape){
             _needsReshape = NO;
             glViewport(0, 0, _bounds.size.width ,_bounds.size.height);
@@ -92,6 +92,7 @@
         
         size_t width = CVPixelBufferGetWidth(_displayBuffer);
         size_t height = CVPixelBufferGetHeight(_displayBuffer);
+		
 
         float src = (float)width / (float)height;
         float dst = _bounds.size.width / _bounds.size.height;
@@ -105,8 +106,10 @@
         }
         
         CIImage *inputImage = [CIImage imageWithCVImageBuffer:_displayBuffer];
-            NSRect imageRect = [inputImage extent];
-        [_ciContext drawImage:inputImage inRect:NSMakeRect((_bounds.size.width - width) / 2, (_bounds.size.height - height) / 2, width, height) fromRect:imageRect];
+        NSRect imageRect = [inputImage extent];
+		NSRect drawRect = NSMakeRect((_bounds.size.width - width) / 2, (_bounds.size.height - height) / 2, width, height);
+        [_ciContext drawImage:inputImage inRect:drawRect fromRect:imageRect];
+		
     CVPixelBufferUnlockBaseAddress(_displayBuffer,kCVPixelBufferLock_ReadOnly);
     }else{
         glClearColor(0.0, 0.0, 0.0, 0.0);

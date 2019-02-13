@@ -140,8 +140,9 @@ void audio_data_receive(unsigned char* buffer, long buflen, void* ref){
         context.audio_did_stop = audio_did_stop;
         context.airplay_did_stop = NULL;
         strcpy(context.name, "AirPlay");
-        context.width = 1280;
-        context.height = 720;
+		NSSize size = [self.view convertSizeToBacking:NSScreen.mainScreen.frame.size];
+        context.width = size.width;
+		context.height = size.height;
         context.ref = (__bridge void*)self;
         
         _bufferQueue = [NSMutableArray arrayWithCapacity:10];
